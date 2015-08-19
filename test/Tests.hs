@@ -8,6 +8,7 @@ module Main (main) where
 import Control.Applicative
 import Control.Monad (join)
 import Data.Align
+import Data.Array (Array)
 import Data.Foldable
 import Data.Bifunctor
 import Data.Functor.Compose
@@ -44,6 +45,7 @@ theseProps = testGroup "These"
   [ functorProps
   , traversableProps
   , dataAlignLaws "[]" (Proxy :: Proxy [])
+  , dataAlignLaws "Array Int" (Proxy :: Proxy (Array Int))
   , dataAlignLaws "HashMap String" (Proxy :: Proxy (HashMap String))
   , dataAlignLaws "IntMap" (Proxy :: Proxy IntMap)
   , dataAlignLaws "Map Char" (Proxy :: Proxy (Map Char))

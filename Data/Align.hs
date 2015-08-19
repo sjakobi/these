@@ -26,6 +26,7 @@ module Data.Align (
 -- TODO: More instances..
 
 import Control.Applicative
+import Data.Array (Array, Ix)
 import Data.Bifoldable (Bifoldable(..))
 import Data.Bifunctor (Bifunctor(..))
 import Data.Foldable
@@ -40,6 +41,7 @@ import Data.These
 import qualified Data.Vector as V
 import Data.Vector.Generic (Vector, unstream, stream, empty)
 import Data.Vector.Fusion.Stream.Monadic (Stream(..), Step(..))
+import qualified Data.Array as A
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Sequence as Seq
 import qualified Data.Vector.Fusion.Stream.Monadic as Stream
@@ -211,6 +213,32 @@ instance (Eq k, Hashable k) => Align (HashMap k) where
     align m n = HashMap.unionWith merge (HashMap.map This m) (HashMap.map That n)
       where merge (This a) (That b) = These a b
             merge _ _ = oops "Align HashMap: merge"
+
+-- This instance is only welldefined for types i that have at least
+-- 2 different values.
+-- If Arrays don't overlap -> undefineds
+-- Replace Enum by custom typeclass LoHi?
+instance (Enum i, Ix i) => Align (Array i) where
+    nil = A.listArray (toEnum 1, toEnum 0) []
+    align xa ya = A.array bnds as
+      where
+        bnds =
+          case (isEmpty xa, isEmpty ya) of
+            (_, True) -> xbnds
+            (True, _) -> ybnds
+            _ -> (min xl yl, max xu yu)
+        isEmpty = null . A.indices
+        xbnds@(xl, xu) = A.bounds xa
+        ybnds@(yl, yu) = A.bounds ya
+
+        as = merge (A.assocs xa) (A.assocs ya)
+        merge xs [] = map (fmap This) xs
+        merge [] ys = map (fmap That) ys
+        merge xxs@((ix, x):xs') yys@((iy, y):ys') =
+          case compare ix iy of
+            LT -> (ix, This x) : merge xs' yys
+            EQ -> (ix, These x y) : merge xs' ys'
+            GT -> (iy, That y) : merge xxs ys'
 
 -- | Align two structures and combine with 'mappend'.
 malign :: (Align f, Monoid a) => f a -> f a -> f a

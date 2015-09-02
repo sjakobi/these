@@ -5,10 +5,10 @@
 -----------------------------------------------------------------------------
 -- | Module     :  Control.Monad.Chronicle.Class
 --
--- Hybrid error/writer monad class that allows both accumulating outputs and 
+-- Hybrid error/writer monad class that allows both accumulating outputs and
 -- aborting computation with a final output.
 --
--- The expected use case is for computations with a notion of fatal vs. 
+-- The expected use case is for computations with a notion of fatal vs.
 -- non-fatal errors.
 --
 -----------------------------------------------------------------------------
@@ -40,26 +40,26 @@ import Data.Monoid
 
 class (Monad m) => MonadChronicle c m | m -> c where
     -- | @'dictate' c@ is an action that records the output @c@.
-    --   
+    --
     --   Equivalent to 'tell' for the 'Writer' monad.
     dictate :: c -> m ()
 
     -- | @'confess' c@ is an action that ends with a final output @c@.
-    --   
+    --
     --   Equivalent to 'throwError' for the 'Error' monad.
     confess :: c -> m a
-        
+
     -- | @'memento' m@ is an action that executes the action @m@, returning either
     --   its record if it ended with 'confess', or its final value otherwise, with
     --   any record added to the current record.
     --
-    --   Similar to 'catchError' in the 'Error' monad, but with a notion of 
+    --   Similar to 'catchError' in the 'Error' monad, but with a notion of
     --   non-fatal errors (which are accumulated) vs. fatal errors (which are caught
     --   without accumulating).
     memento :: m a -> m (Either c a)
 
     -- | @'absolve' x m@ is an action that executes the action @m@ and discards any
-    --   record it had. The default value @x@ will be used if @m@ ended via 
+    --   record it had. The default value @x@ will be used if @m@ ended via
     --   'confess'.
     absolve :: a -> m a -> m a
 
@@ -72,10 +72,10 @@ class (Monad m) => MonadChronicle c m | m -> c where
 
     -- | @'retcon' f m@ is an action that executes the action @m@ and applies the
     --   function @f@ to its output, leaving the return value unchanged.
-    --   
+    --
     --   Equivalent to 'censor' for the 'Writer' monad.
     retcon :: (c -> c) -> m a -> m a
-    
+
     -- | @'chronicle' m@ lifts a plain 'These c a' value into a 'MonadChronicle' instance.
     chronicle :: These c a -> m a
 
@@ -163,7 +163,7 @@ instance (MonadChronicle c m) => MonadChronicle c (StrictState.StateT s m) where
 instance (Monoid w, MonadChronicle c m) => MonadChronicle c (LazyWriter.WriterT w m) where
     dictate = lift . dictate
     confess = lift . confess
-    memento (LazyWriter.WriterT m) = LazyWriter.WriterT $ 
+    memento (LazyWriter.WriterT m) = LazyWriter.WriterT $
         either (\c -> (Left c, mempty)) (\(a, w) -> (Right a, w)) `liftM` memento m
     absolve x (LazyWriter.WriterT m) = LazyWriter.WriterT $ absolve (x, mempty) m
     condemn (LazyWriter.WriterT m) = LazyWriter.WriterT $ condemn m
@@ -173,7 +173,7 @@ instance (Monoid w, MonadChronicle c m) => MonadChronicle c (LazyWriter.WriterT 
 instance (Monoid w, MonadChronicle c m) => MonadChronicle c (StrictWriter.WriterT w m) where
     dictate = lift . dictate
     confess = lift . confess
-    memento (StrictWriter.WriterT m) = StrictWriter.WriterT $ 
+    memento (StrictWriter.WriterT m) = StrictWriter.WriterT $
         either (\c -> (Left c, mempty)) (\(a, w) -> (Right a, w)) `liftM` memento m
     absolve x (StrictWriter.WriterT m) = StrictWriter.WriterT $ absolve (x, mempty) m
     condemn (StrictWriter.WriterT m) = StrictWriter.WriterT $ condemn m

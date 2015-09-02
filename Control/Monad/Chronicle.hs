@@ -1,4 +1,4 @@
-module Control.Monad.Chronicle ( 
+module Control.Monad.Chronicle (
                                -- * Type class for Chronicle-style monads
                                  MonadChronicle(..)
                                -- * The ChronicleT monad transformer

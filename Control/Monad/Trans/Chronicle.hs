@@ -8,7 +8,7 @@
 -- both accumulating outputs and aborting computation with a final
 -- output.
 -----------------------------------------------------------------------------
-module Control.Monad.Trans.Chronicle ( 
+module Control.Monad.Trans.Chronicle (
                                      -- * The Chronicle monad
                                        Chronicle, chronicle, runChronicle
                                      -- * The ChronicleT monad transformer
@@ -70,9 +70,9 @@ instance (Monoid c, Apply m, Monad m) => Bind (ChronicleT c m) where
 
 instance (Monoid c, Monad m) => Monad (ChronicleT c m) where
     return = ChronicleT . return . return
-    m >>= k = ChronicleT $ 
+    m >>= k = ChronicleT $
         do cx <- runChronicleT m
-           case cx of 
+           case cx of
                This  a   -> return (This a)
                That    x -> runChronicleT (k x)
                These a x -> do cy <- runChronicleT (k x)
@@ -126,21 +126,21 @@ instance (Monoid c, MonadWriter w m) => MonadWriter w (ChronicleT c m) where
                      That    x -> That (x, w)
                      These c x -> These c (x, w)
     pass (ChronicleT m) = ChronicleT $ do
-        pass $ these (\c -> (This c, id)) 
-                     (\(x, f) -> (That x, f)) 
+        pass $ these (\c -> (This c, id))
+                     (\(x, f) -> (That x, f))
                      (\c (x, f) -> (These c x, f)) `liftM` m
     writer = lift . writer
 
 
 
 -- | @'dictate' c@ is an action that records the output @c@.
---   
+--
 --   Equivalent to 'tell' for the 'Writer' monad.
 dictate :: (Monoid c, Monad m) => c -> ChronicleT c m ()
 dictate c = ChronicleT $ return (These c ())
 
 -- | @'confess' c@ is an action that ends with a final output @c@.
---   
+--
 --   Equivalent to 'throwError' for the 'Error' monad.
 confess :: (Monoid c, Monad m) => c -> ChronicleT c m a
 confess c = ChronicleT $ return (This c)
@@ -149,11 +149,11 @@ confess c = ChronicleT $ return (This c)
 --   its record if it ended with 'confess', or its final value otherwise, with
 --   any record added to the current record.
 --
---   Similar to 'catchError' in the 'Error' monad, but with a notion of 
+--   Similar to 'catchError' in the 'Error' monad, but with a notion of
 --   non-fatal errors (which are accumulated) vs. fatal errors (which are caught
 --   without accumulating).
 memento :: (Monoid c, Monad m) => ChronicleT c m a -> ChronicleT c m (Either c a)
-memento m = ChronicleT $ 
+memento m = ChronicleT $
     do cx <- runChronicleT m
        return $ case cx of
                     This  a   -> That (Left a)
@@ -161,10 +161,10 @@ memento m = ChronicleT $
                     These a x -> These a (Right x)
 
 -- | @'absolve' x m@ is an action that executes the action @m@ and discards any
---   record it had. The default value @x@ will be used if @m@ ended via 
+--   record it had. The default value @x@ will be used if @m@ ended via
 --   'confess'.
 absolve :: (Monoid c, Monad m) => a -> ChronicleT c m a -> ChronicleT c m a
-absolve x m = ChronicleT $ 
+absolve x m = ChronicleT $
     do cy <- runChronicleT m
        return $ case cy of
                     This  _   -> That x
@@ -178,7 +178,7 @@ absolve x m = ChronicleT $
 --
 --   This can be seen as converting non-fatal errors into fatal ones.
 condemn :: (Monoid c, Monad m) => ChronicleT c m a -> ChronicleT c m a
-condemn (ChronicleT m) = ChronicleT $ do 
+condemn (ChronicleT m) = ChronicleT $ do
     m' <- m
     return $ case m' of
         This  x   -> This x
@@ -188,7 +188,7 @@ condemn (ChronicleT m) = ChronicleT $ do
 
 -- | @'retcon' f m@ is an action that executes the action @m@ and applies the
 --   function @f@ to its output, leaving the return value unchanged.
---   
+--
 --   Equivalent to 'censor' for the 'Writer' monad.
 retcon :: (Monoid c, Monad m) => (c -> c) -> ChronicleT c m a -> ChronicleT c m a
 retcon f m = ChronicleT $ mapThis f `liftM` runChronicleT m
